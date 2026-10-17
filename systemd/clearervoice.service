@@ -1,0 +1,17 @@
+[Unit]
+Description=ClearerVoice Studio web UI (Streamlit)
+Documentation=https://github.com/modelscope/ClearerVoice-Studio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/clearervoice
+Environment=CV_IDLE_TIMEOUT=30
+ExecStart=%h/clearervoice/.venv/bin/streamlit run streamlit_app.py
+Restart=on-failure
+RestartSec=5
+# GPU workers are spawned as children and exit on their own after idle timeout.
+
+[Install]
+WantedBy=default.target

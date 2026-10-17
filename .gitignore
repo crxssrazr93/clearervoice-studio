@@ -1,0 +1,16 @@
+# Python virtualenv (lives on the server at ~/clearervoice/.venv)
+.venv/
+__pycache__/
+*.pyc
+
+# Model weights are downloaded on the server, never committed
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+
+# Runtime data: uploads, outputs, job queue, logs
+temp/
+jobs/
+*.log
+*.bak

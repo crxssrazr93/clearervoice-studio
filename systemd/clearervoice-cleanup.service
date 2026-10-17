@@ -1,0 +1,7 @@
+[Unit]
+Description=Prune ClearerVoice uploads and job records (keeps outputs)
+
+[Service]
+Type=oneshot
+Environment=CV_RETAIN_DAYS=7
+ExecStart=%h/clearervoice/cleanup.sh
