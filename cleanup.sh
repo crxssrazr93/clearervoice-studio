@@ -37,8 +37,9 @@ echo "prune: retaining $DAYS days, started $(date -Is)"
 #    maxdepth 1 and are never reached.
 [ -d "$APP/temp" ] && prune upload "$APP/temp" -maxdepth 1 -type f -mtime +"$DAYS"
 
-# 2. VAD intermediates -- written alongside outputs, but pure scratch.
+# 2. VAD and de-reverb intermediates -- written alongside outputs, but pure scratch.
 [ -d "$APP/temp" ] && prune vadseg "$APP/temp" -type f -name '_vadsegs_*' -mtime +"$DAYS"
+[ -d "$APP/temp" ] && prune dereverb "$APP/temp" -type f -name '_dereverb_*' -mtime +"$DAYS"
 
 # 3. completed job records and stale running markers
 [ -d "$APP/jobs/done" ] && prune job "$APP/jobs/done" -type f \

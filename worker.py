@@ -62,17 +62,37 @@ def get_model(task, model_name):
     return _models[key]
 
 
+def get_dereverb():
+    key = ("dereverb", "mono_anvuew")
+    if key not in _models:
+        from dereverb import Dereverb
+        log("loading de-reverb model ...")
+        _models[key] = Dereverb(log=log)
+    return _models[key]
+
+
 # --- task handlers ---------------------------------------------------------
 def run_speech_enhancement(job):
     input_path = job["input_path"]
     model_name = job["model"]
     enable_vad = bool(job.get("enable_vad", False))
+    enable_dereverb = bool(job.get("dereverb", False))
     out_dir = job["output_dir"]
     os.makedirs(out_dir, exist_ok=True)
 
     stem = os.path.splitext(os.path.basename(input_path))[0]
-    suffix = "_vad" if enable_vad else ""
+    suffix = ("_dereverb" if enable_dereverb else "") + ("_vad" if enable_vad else "")
     output_path = os.path.join(out_dir, f"output_{model_name}{suffix}_{stem}.wav")
+
+    # De-reverb runs first; VAD and the enhancement model then see the dry signal.
+    source = input_path
+    if enable_dereverb:
+        raw, raw_sr = sf.read(input_path, dtype="float32")
+        t0 = time.time()
+        dry = get_dereverb()(raw, raw_sr)
+        log(f"de-reverb done in {time.time() - t0:.1f}s")
+        source = os.path.join(out_dir, f"_dereverb_{stem}.wav")
+        sf.write(source, dry, raw_sr)
 
     speech_ts = None
     orig_audio = orig_sr = None
@@ -81,7 +101,7 @@ def run_speech_enhancement(job):
         import librosa
         import torch
         from silero_vad import load_silero_vad, get_speech_timestamps
-        orig_audio, orig_sr = sf.read(input_path)
+        orig_audio, orig_sr = sf.read(source)
         if orig_audio.ndim > 1:
             orig_audio = orig_audio.mean(axis=1)
         vad_model = load_silero_vad()
@@ -98,7 +118,7 @@ def run_speech_enhancement(job):
         sf.write(seg_path, speech_input, orig_sr)
         model_input = seg_path
     else:
-        model_input = input_path
+        model_input = source
 
     cv = get_model("speech_enhancement", model_name)
     output_wav = cv(input_path=model_input, online_write=False)
@@ -120,6 +140,20 @@ def run_speech_enhancement(job):
         sf.write(output_path, full, orig_sr, format="WAV", subtype="PCM_16")
     else:
         cv.write(output_wav, output_path=output_path)
+
+    if enable_dereverb:
+        # Removing the reverb tail lowers the level about 2 to 3 dB; bring the
+        # speech back to the loudness of the original upload.
+        from dereverb import match_loudness
+        out, out_sr = sf.read(output_path, dtype="float32")
+        ref, ref_sr = sf.read(input_path, dtype="float32")
+        if ref.ndim > 1:
+            ref = ref.mean(axis=1)
+        if ref_sr != out_sr:
+            import librosa
+            ref = librosa.resample(ref, orig_sr=ref_sr, target_sr=out_sr)
+        sf.write(output_path, match_loudness(out, ref, out_sr), out_sr,
+                 format="WAV", subtype="PCM_16")
 
     return {"outputs": [output_path]}
 

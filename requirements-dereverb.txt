@@ -1,0 +1,6 @@
+# Extra packages for the "Remove room echo" option (dereverb.py + vendor/msst).
+# Everything else it needs (torch, einops, librosa, packaging) is already in the venv.
+# Install with --no-deps, otherwise uv resolves a second multi-GB torch for rotary-embedding-torch:
+#   uv pip install --python ~/clearervoice/.venv/bin/python --no-deps -r requirements-dereverb.txt
+beartype==0.23.1
+rotary-embedding-torch==0.9.1

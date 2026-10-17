@@ -155,6 +155,12 @@ def main():
         st.header("Speech Enhancement")
         se_models = ["MossFormer2_SE_48K", "FRCRN_SE_16K", "MossFormerGAN_SE_16K"]
         selected_model = st.selectbox("Select Model", se_models)
+        enable_dereverb = st.checkbox(
+            "Remove room echo (de-reverb)", key="se_dereverb",
+            help="Runs a MelBand-RoFormer de-reverb model before enhancement. "
+                 "The enhancement models alone remove noise but barely touch room echo. "
+                 "Speech only: background music would be treated as echo. "
+                 "First use downloads about 900 MB.")
         enable_vad = st.checkbox("Enable VAD Preprocessing", key="se_vad")
         uploaded = st.file_uploader("Upload Audio File(s)", type=["wav"],
                                     key="se", accept_multiple_files=True)
@@ -163,7 +169,8 @@ def main():
             if uploaded:
                 out_dir = os.path.join(TEMP, "speech_enhancement_output")
                 jids = [submit("speech_enhancement", selected_model,
-                               save_uploaded_file(u), out_dir, enable_vad=enable_vad)
+                               save_uploaded_file(u), out_dir, enable_vad=enable_vad,
+                               dereverb=enable_dereverb)
                         for u in uploaded]
                 status_box = st.empty()
                 results = wait_for(jids, status_box)
