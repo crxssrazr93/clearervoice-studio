@@ -1,0 +1,23 @@
+ClearerVoice Studio (LAN web UI)
+Copyright 2026 crxssrazr93
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project includes or derives from the following third-party work:
+
+* ClearerVoice-Studio by Tongyi Lab / ModelScope
+  https://github.com/modelscope/ClearerVoice-Studio
+  Apache License 2.0. streamlit_app.py and the VAD handling in worker.py are
+  derived from clearvoice/streamlit_app.py in that repository. The clearvoice
+  package and its model weights are installed separately and are not included here.
+
+* Music-Source-Separation-Training by Roman Solovyev (ZFTurbo)
+  https://github.com/ZFTurbo/Music-Source-Separation-Training
+  MIT License. vendor/msst/ contains MelBandRoformer model code from it; its
+  license is in vendor/msst/LICENSE.
+
+* dereverb_mel_band_roformer by anvuew
+  https://huggingface.co/anvuew/dereverb_mel_band_roformer
+  GPL-3.0. The de-reverb model weights are downloaded at runtime by dereverb.py
+  and are NOT included in or redistributed by this repository. Use of those
+  weights is subject to their own license.

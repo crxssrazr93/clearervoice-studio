@@ -46,3 +46,8 @@ ssh razr93@192.168.2.186 'systemctl --user restart clearervoice'
 ```
 
 `requirements.lock.txt` is a `uv pip freeze` of the working venv, for rebuilding it from scratch.
+
+## License
+
+Apache License 2.0 (see `LICENSE`). Third-party code and models, including the GPL-3.0 licensed
+de-reverb weights that are downloaded at runtime, are listed in `NOTICE`.
