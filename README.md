@@ -1,8 +1,9 @@
 # ClearerVoice Studio
 
-A LAN web UI (Streamlit) around [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio)
-for cleaning up speech recordings. It runs on the razr93 box (`192.168.2.186`, RTX 3060) at
-**http://192.168.2.186:8501**.
+A self-hosted web UI (Streamlit) around [ClearerVoice-Studio](https://github.com/modelscope/ClearerVoice-Studio)
+for cleaning up speech recordings on a single NVIDIA GPU machine, for example a box on your LAN.
+GPU jobs run in a separate worker process that exits when idle, so the card is only held while
+something is being processed.
 
 ## Tasks
 
@@ -28,7 +29,7 @@ original upload.
 * **Result on three real talking head recordings:** the echo tail 50 to 150 ms after each word went from
   about -8.5 dB to about -19 dB (relative to the speech before it), versus about -10.5 dB with
   enhancement alone. Speech level is unchanged after loudness matching.
-* **Speed on the RTX 3060:** about 0.35 s of processing per second of audio, plus 4 s to load the model.
+* **Speed on an RTX 3060:** about 0.33 s of processing per second of audio, plus 4 s to load the model.
 
 Things to know:
 
@@ -51,35 +52,46 @@ Things to know:
 * `cleanup.sh` prunes uploads and job records older than `CV_RETAIN_DAYS` (default 7). Outputs in
   `temp/*_output/` are never deleted.
 
-## Layout on the server
+## Setup
+
+Requirements: Linux, an NVIDIA GPU with a recent driver, Python 3.12 and ffmpeg.
 
 ```
-~/clearervoice/
-  streamlit_app.py  worker.py  cleanup.sh
-  .venv/            Python 3.12 venv (see requirements.lock.txt)
-  checkpoints/      ClearVoice model weights (downloaded on first use)
-  temp/             uploads and *_output/ deliverables
-  jobs/             pending/ and done/ queue
-~/.config/systemd/user/
-  clearervoice.service            the web UI
-  clearervoice-cleanup.service    daily prune
-  clearervoice-cleanup.timer
+git clone https://github.com/crxssrazr93/clearervoice-studio.git ~/clearervoice
+cd ~/clearervoice
+python3.12 -m venv .venv
+.venv/bin/pip install clearvoice streamlit silero-vad
+.venv/bin/pip install --no-deps -r requirements-dereverb.txt
+.venv/bin/streamlit run streamlit_app.py
 ```
 
-## Deploy
+Then open `http://<host>:8501`. ClearVoice model weights download into `checkpoints/` the first
+time each model is used. `requirements.lock.txt` lists the exact package versions of a known
+working install (torch 2.13 with CUDA 13).
 
-Copy the code to the server, install the de-reverb extras once, and restart the UI:
+### Run as a service
+
+The units in `systemd/` are systemd user units and expect the app at `~/clearervoice`:
 
 ```
-rsync -a --exclude .git --exclude systemd ./ razr93@192.168.2.186:clearervoice/
-ssh razr93@192.168.2.186 'cd ~/clearervoice; ~/.local/bin/uv pip install --python .venv/bin/python --no-deps -r requirements-dereverb.txt'
-ssh razr93@192.168.2.186 'systemctl --user restart clearervoice'
+cp systemd/* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now clearervoice.service clearervoice-cleanup.timer
 ```
 
-A running worker keeps its old code until it idles out (30 s), so wait for the queue to drain
-before testing a change.
+To keep the UI running after you log out, enable lingering once with `loginctl enable-linger`.
+After updating the code, restart `clearervoice.service`. A worker that is still running keeps the
+old code until it idles out (`CV_IDLE_TIMEOUT`, 30 s by default).
 
-`requirements.lock.txt` is a `uv pip freeze` of the working venv, for rebuilding it from scratch.
+### Layout
+
+```
+streamlit_app.py  worker.py  cleanup.sh  dereverb.py  vendor/
+.venv/            Python venv
+checkpoints/      model weights (downloaded on first use)
+temp/             uploads, and *_output/ folders with the results
+jobs/             pending/ and done/ job queue
+```
 
 ## License
 
