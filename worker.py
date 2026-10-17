@@ -78,12 +78,16 @@ def run_speech_enhancement(job):
     orig_audio = orig_sr = None
 
     if enable_vad:
-        from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
+        import librosa
+        import torch
+        from silero_vad import load_silero_vad, get_speech_timestamps
         orig_audio, orig_sr = sf.read(input_path)
         if orig_audio.ndim > 1:
             orig_audio = orig_audio.mean(axis=1)
         vad_model = load_silero_vad()
-        vad_wav = read_audio(input_path)
+        # silero's read_audio goes through torchaudio, which (2.9+) needs torchcodec
+        vad_wav = torch.from_numpy(librosa.resample(
+            orig_audio.astype(np.float32), orig_sr=orig_sr, target_sr=16000))
         timestamps = get_speech_timestamps(vad_wav, vad_model, sampling_rate=16000)
         scale = orig_sr / 16000.0
         speech_ts = [{"start": int(t["start"] * scale), "end": int(t["end"] * scale)}
